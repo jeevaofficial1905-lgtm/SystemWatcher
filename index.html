@@ -12,8 +12,8 @@
         <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md border border-gray-700">
             <h2 class="text-3xl font-bold text-blue-400 mb-6 text-center">Admin Login</h2>
             <div class="space-y-4">
-                <input id="loginEmail" type="email" placeholder="Email" class="w-full bg-gray-700 p-3 rounded border border-gray-600 focus:border-blue-500 outline-none">
-                <input id="loginPass" type="password" placeholder="Password" class="w-full bg-gray-700 p-3 rounded border border-gray-600 focus:border-blue-500 outline-none">
+                <input id="loginEmail" type="email" placeholder="Email" class="w-full bg-gray-700 p-3 rounded border border-gray-600 focus:border-blue-500 outline-none text-white">
+                <input id="loginPass" type="password" placeholder="Password" class="w-full bg-gray-700 p-3 rounded border border-gray-600 focus:border-blue-500 outline-none text-white">
                 <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-bold transition">Sign In</button>
                 <p id="loginError" class="text-red-500 text-sm text-center hidden pt-2"></p>
             </div>
@@ -25,23 +25,21 @@
             <div class="max-w-7xl mx-auto flex justify-between items-center">
                 <h1 class="text-xl font-bold text-blue-400">SystemWatcher Admin</h1>
                 <div class="space-x-4">
-                    <button onclick="showPage('dashboard')" class="hover:text-blue-400">Dashboard</button>
-                    <button onclick="showPage('monitor')" class="hover:text-blue-400">Monitor</button>
-                    <button onclick="showPage('registration')" class="hover:text-blue-400">Registration</button>
-                    <button onclick="handleLogout()" class="text-red-400 ml-4">Logout</button>
+                    <button onclick="showPage('dashboard')" class="hover:text-blue-400 transition">Dashboard</button>
+                    <button onclick="showPage('monitor')" class="hover:text-blue-400 transition">System Monitor</button>
+                    <button onclick="showPage('registration')" class="hover:text-blue-400 transition">PC Registration</button>
+                    <button onclick="handleLogout()" class="text-red-400 border border-red-900 px-3 py-1 rounded hover:bg-red-900 transition ml-4">Logout</button>
                 </div>
             </div>
         </nav>
 
         <main class="max-w-7xl mx-auto p-6">
             <div id="dashboard" class="page">
-                <h2 class="text-2xl font-semibold mb-6">File Logs</h2>
+                <h2 class="text-2xl font-semibold mb-6">Live File Feed</h2>
                 <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
                     <table class="w-full text-left">
-                        <thead class="bg-gray-700 text-xs uppercase text-gray-400">
-                            <tr>
-                                <th class="p-4">System</th><th class="p-4">File Name</th><th class="p-4">Type</th><th class="p-4">Size</th><th class="p-4">Created</th>
-                            </tr>
+                        <thead class="bg-gray-700 text-xs uppercase text-gray-400 font-bold">
+                            <tr><th class="p-4">System</th><th class="p-4">File Name</th><th class="p-4">Type</th><th class="p-4">Size</th><th class="p-4">Created Time</th></tr>
                         </thead>
                         <tbody id="dashboardTable" class="divide-y divide-gray-700"></tbody>
                     </table>
@@ -54,11 +52,15 @@
             </div>
 
             <div id="registration" class="page hidden">
-                <h2 class="text-2xl font-semibold mb-6">PC Approvals</h2>
+                <h2 class="text-2xl font-semibold mb-6">PC Registration & Approvals</h2>
+                <div class="bg-gray-800 p-6 rounded-lg mb-8 max-w-sm border border-gray-700">
+                    <input id="pcNameInput" type="text" placeholder="New PC Name" class="w-full bg-gray-700 p-2 rounded mb-4 text-white border border-gray-600">
+                    <button onclick="generateRegistration()" class="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-bold transition">Generate Code</button>
+                </div>
                 <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
                     <table class="w-full text-left">
                         <thead class="bg-gray-700 text-xs uppercase text-gray-400">
-                            <tr><th class="p-4">System Name</th><th class="p-4">Code</th><th class="p-4">Status</th><th class="p-4 text-right">Action</th></tr>
+                            <tr><th class="p-4">System Name</th><th class="p-4">Code</th><th class="p-4">Status</th><th class="p-4 text-right">Actions</th></tr>
                         </thead>
                         <tbody id="registrationTable" class="divide-y divide-gray-700"></tbody>
                     </table>
@@ -70,7 +72,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, onValue, set, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAVuK7rOFkfNvfBCovdgW-ahK5euGLVC34",
@@ -84,17 +86,15 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // LOGIN HANDLERS
+        // --- AUTH ---
         window.handleLogin = () => {
             const email = document.getElementById('loginEmail').value;
             const pass = document.getElementById('loginPass').value;
             signInWithEmailAndPassword(auth, email, pass).catch(err => {
-                const errDiv = document.getElementById('loginError');
-                errDiv.innerText = err.message;
-                errDiv.classList.remove('hidden');
+                document.getElementById('loginError').innerText = err.message;
+                document.getElementById('loginError').classList.remove('hidden');
             });
         };
-
         window.handleLogout = () => signOut(auth);
 
         onAuthStateChanged(auth, (user) => {
@@ -108,43 +108,51 @@
             }
         });
 
+        // --- UI ---
         window.showPage = (id) => {
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         };
 
-        window.approveSystem = (name) => update(ref(db, `registrations/${name}`), { status: 'Approved' });
+        // --- ACTIONS ---
+        window.generateRegistration = () => {
+            const name = document.getElementById('pcNameInput').value.trim();
+            if(!name) return;
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            set(ref(db, `registrations/${name}`), { code, status: 'Pending' });
+            document.getElementById('pcNameInput').value = "";
+        };
 
-        // --- THE DATA LISTENERS ---
+        window.approveSystem = (name) => update(ref(db, `registrations/${name}`), { status: 'Approved' });
+        window.rejectSystem = (name) => confirm(`Delete ${name}?`) && remove(ref(db, `registrations/${name}`));
+
+        // --- LISTENERS ---
         function startListeners() {
-            // Logs
-            onValue(ref(db, 'logs'), (snap) => {
+            onValue(ref(db, 'logs'), snap => {
                 const tbody = document.getElementById('dashboardTable');
                 tbody.innerHTML = '';
                 snap.forEach(c => {
                     const v = c.val();
-                    tbody.innerHTML += `<tr><td class="p-4 font-bold text-blue-300">${v.system_name}</td><td class="p-4">${v.file_name}</td><td class="p-4">${v.file_type}</td><td class="p-4">${v.file_size}</td><td class="p-4 text-gray-400 text-xs">${v.created_time}</td></tr>`;
+                    tbody.innerHTML += `<tr><td class="p-4 font-bold text-blue-300">${v.system_name}</td><td class="p-4">${v.file_name}</td><td class="p-4">${v.file_type}</td><td class="p-4 font-mono">${v.file_size}</td><td class="p-4 text-xs text-gray-500">${v.created_time}</td></tr>`;
                 });
             });
 
-            // Status
-            onValue(ref(db, 'systems'), (snap) => {
+            onValue(ref(db, 'systems'), snap => {
                 const grid = document.getElementById('monitorGrid');
                 grid.innerHTML = '';
                 snap.forEach(c => {
                     const v = c.val();
                     const isOnline = (Date.now() / 1000) - v.last_seen < 60;
                     grid.innerHTML += `
-                        <div class="bg-gray-800 p-4 rounded-lg border-t-2 ${isOnline ? 'border-green-500' : 'border-red-500'}">
-                            <h3 class="font-bold text-lg">${c.key}</h3>
-                            <p class="text-sm text-gray-400">BIOS: ${v.bios_time}</p>
-                            <p class="text-xs ${isOnline ? 'text-green-400' : 'text-red-400'} font-bold mt-2">${isOnline ? 'ONLINE' : 'OFFLINE'}</p>
+                        <div class="bg-gray-800 p-5 rounded-lg border-l-4 ${isOnline ? 'border-green-500' : 'border-red-500'}">
+                            <h3 class="font-bold text-xl mb-2">${c.key}</h3>
+                            <p class="text-xs text-gray-400">BIOS: ${v.bios_time}</p>
+                            <p class="mt-4 font-bold ${isOnline ? 'text-green-400' : 'text-red-400'}">${isOnline ? '● ONLINE' : '○ OFFLINE'}</p>
                         </div>`;
                 });
             });
 
-            // Registrations
-            onValue(ref(db, 'registrations'), (snap) => {
+            onValue(ref(db, 'registrations'), snap => {
                 const tbody = document.getElementById('registrationTable');
                 tbody.innerHTML = '';
                 snap.forEach(c => {
@@ -152,11 +160,12 @@
                     const isApproved = v.status === 'Approved';
                     tbody.innerHTML += `
                         <tr>
-                            <td class="p-4">${c.key}</td>
+                            <td class="p-4 font-bold">${c.key}</td>
                             <td class="p-4 font-mono text-yellow-400">${v.code}</td>
-                            <td class="p-4 text-sm ${isApproved ? 'text-green-400' : 'text-orange-400'}">${v.status}</td>
-                            <td class="p-4 text-right">
-                                ${!isApproved ? `<button onclick="approveSystem('${c.key}')" class="bg-green-600 px-3 py-1 rounded text-xs font-bold">Approve</button>` : '—'}
+                            <td class="p-4"><span class="${isApproved ? 'text-green-400' : 'text-orange-400'} font-bold">${v.status}</span></td>
+                            <td class="p-4 text-right space-x-2">
+                                ${!isApproved ? `<button onclick="approveSystem('${c.key}')" class="bg-green-600 px-3 py-1 rounded text-xs font-bold">Approve</button>` : ''}
+                                <button onclick="rejectSystem('${c.key}')" class="bg-red-600 px-3 py-1 rounded text-xs font-bold">Reject</button>
                             </td>
                         </tr>`;
                 });
