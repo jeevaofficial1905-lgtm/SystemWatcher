@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitor Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans">
+
+    <nav class="bg-gray-800 border-b border-gray-700 p-4 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold text-blue-400">SystemWatcher Admin</h1>
+            <div class="space-x-4">
+                <button onclick="showPage('dashboard')" class="hover:text-blue-400 transition">Dashboard</button>
+                <button onclick="showPage('monitor')" class="hover:text-blue-400 transition">System Monitor</button>
+                <button onclick="showPage('registration')" class="hover:text-blue-400 transition">PC Registration</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-6">
+        
+        <div id="dashboard" class="page">
+            <h2 class="text-2xl font-semibold mb-6">Live File Feed</h2>
+            <div class="overflow-x-auto bg-gray-800 rounded-lg shadow">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-700 text-gray-300 uppercase text-sm">
+                        <tr>
+                            <th class="p-4">System Name</th>
+                            <th class="p-4">File Name</th>
+                            <th class="p-4">Type</th>
+                            <th class="p-4">Size</th>
+                            <th class="p-4">Created Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboardTable" class="divide-y divide-gray-700">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="monitor" class="page hidden">
+            <h2 class="text-2xl font-semibold mb-6">System Health</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="monitorGrid">
+                </div>
+        </div>
+
+        <div id="registration" class="page hidden">
+            <h2 class="text-2xl font-semibold mb-6">New PC Registration</h2>
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-8 max-w-md">
+                <div class="space-y-4">
+                    <input id="pcNameInput" type="text" placeholder="Enter System Name (e.g. PC-OFFICE-1)" class="w-full bg-gray-700 border border-gray-600 p-2 rounded text-white focus:outline-none focus:border-blue-500">
+                    <button onclick="generateRegistration()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition">Generate & Register Code</button>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-semibold mb-4">Pending/Approved Systems</h3>
+            <div class="bg-gray-800 rounded-lg shadow overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-700">
+                        <tr>
+                            <th class="p-4">System Name</th>
+                            <th class="p-4">Code</th>
+                            <th class="p-4">Status</th>
+                            <th class="p-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="registrationTable" class="divide-y divide-gray-700"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // Your Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAVuK7rOFkfNvfBCovdgW-ahK5euGLVC34",
+            authDomain: "systemwatcher-a2069.firebaseapp.com",
+            databaseURL: "https://systemwatcher-a2069-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "systemwatcher-a2069",
+            storageBucket: "systemwatcher-a2069.firebasestorage.app",
+            messagingSenderId: "432649033136",
+            appId: "1:432649033136:web:5beb19d62d32472e5e3275"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // --- NAVIGATION ---
+        window.showPage = (id) => {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        };
+
+        // --- REGISTRATION LOGIC ---
+        window.generateRegistration = () => {
+            const name = document.getElementById('pcNameInput').value.trim();
+            if (!name) return alert("Please enter a name");
+            
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            set(ref(db, 'registrations/' + name), {
+                code: code,
+                status: 'Pending'
+            }).then(() => {
+                alert(`Code for ${name}: ${code}\nGive this to the user for the Exe!`);
+                document.getElementById('pcNameInput').value = "";
+            });
+        };
+
+        window.approveSystem = (name) => {
+            update(ref(db, `registrations/${name}`), { status: 'Approved' });
+        };
+
+        // --- REAL-TIME DATA SYNC ---
+
+        // 1. Dashboard (Files)
+        onValue(ref(db, 'logs'), (snapshot) => {
+            const tbody = document.getElementById('dashboardTable');
+            tbody.innerHTML = '';
+            snapshot.forEach(child => {
+                const val = child.val();
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-750 transition">
+                        <td class="p-4">${val.system_name}</td>
+                        <td class="p-4 font-medium text-blue-300">${val.file_name}</td>
+                        <td class="p-4 text-gray-400">${val.file_type}</td>
+                        <td class="p-4">${val.file_size}</td>
+                        <td class="p-4 text-sm text-gray-400">${val.created_time}</td>
+                    </tr>`;
+            });
+        });
+
+        // 2. System Monitor (Online Status)
+        onValue(ref(db, 'systems'), (snapshot) => {
+            const grid = document.getElementById('monitorGrid');
+            grid.innerHTML = '';
+            snapshot.forEach(child => {
+                const val = child.val();
+                const lastSeen = val.last_seen;
+                const isOnline = (Date.now() / 1000) - lastSeen < 60; // 60s timeout
+
+                grid.innerHTML += `
+                    <div class="bg-gray-800 p-5 rounded-lg border-l-4 ${isOnline ? 'border-green-500' : 'border-red-500 shadow-lg shadow-red-900/20'}">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold">${child.key}</h3>
+                            <span class="px-2 py-1 rounded text-xs font-bold ${isOnline ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}">
+                                ${isOnline ? 'ONLINE' : 'OFFLINE'}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-400">BIOS Time: <span class="text-gray-200">${val.bios_time}</span></p>
+                        <p class="text-sm text-gray-400">Last Seen: <span class="text-gray-200">${new Date(lastSeen * 1000).toLocaleTimeString()}</span></p>
+                    </div>`;
+            });
+        });
+
+        // 3. Registration Table
+        onValue(ref(db, 'registrations'), (snapshot) => {
+            const tbody = document.getElementById('registrationTable');
+            tbody.innerHTML = '';
+            snapshot.forEach(child => {
+                const val = child.val();
+                const isApproved = val.status === 'Approved';
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-4">${child.key}</td>
+                        <td class="p-4 font-mono text-yellow-400">${val.code}</td>
+                        <td class="p-4">
+                            <span class="${isApproved ? 'text-green-400' : 'text-yellow-500'} font-bold">${val.status}</span>
+                        </td>
+                        <td class="p-4">
+                            ${!isApproved ? `<button onclick="approveSystem('${child.key}')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm">Approve</button>` : '—'}
+                        </td>
+                    </tr>`;
+            });
+        });
+
+    </script>
+</body>
+</html>
