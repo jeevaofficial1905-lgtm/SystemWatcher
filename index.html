@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure System Admin</title>
+    <title>System Monitor Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
@@ -15,7 +15,7 @@
                 <input id="loginEmail" type="email" placeholder="Email" class="w-full bg-gray-700 p-3 rounded border border-gray-600 focus:border-blue-500 outline-none">
                 <input id="loginPass" type="password" placeholder="Password" class="w-full bg-gray-700 p-3 rounded border border-gray-600 focus:border-blue-500 outline-none">
                 <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-bold transition">Sign In</button>
-                <p id="loginError" class="text-red-500 text-sm text-center hidden"></p>
+                <p id="loginError" class="text-red-500 text-sm text-center hidden pt-2"></p>
             </div>
         </div>
     </div>
@@ -25,24 +25,44 @@
             <div class="max-w-7xl mx-auto flex justify-between items-center">
                 <h1 class="text-xl font-bold text-blue-400">SystemWatcher Admin</h1>
                 <div class="space-x-4">
-                    <button onclick="showPage('dashboard')" class="hover:text-blue-400 transition">Dashboard</button>
-                    <button onclick="showPage('monitor')" class="hover:text-blue-400 transition">Monitor</button>
-                    <button onclick="showPage('registration')" class="hover:text-blue-400 transition">Registration</button>
-                    <button onclick="handleLogout()" class="text-red-400 border border-red-900 px-3 py-1 rounded hover:bg-red-900 transition">Logout</button>
+                    <button onclick="showPage('dashboard')" class="hover:text-blue-400">Dashboard</button>
+                    <button onclick="showPage('monitor')" class="hover:text-blue-400">Monitor</button>
+                    <button onclick="showPage('registration')" class="hover:text-blue-400">Registration</button>
+                    <button onclick="handleLogout()" class="text-red-400 ml-4">Logout</button>
                 </div>
             </div>
         </nav>
 
         <main class="max-w-7xl mx-auto p-6">
             <div id="dashboard" class="page">
-                <h2 class="text-2xl font-semibold mb-6">Live File Feed</h2>
-                <div class="bg-gray-800 rounded-lg overflow-hidden"><table class="w-full text-left"><tbody id="dashboardTable"></tbody></table></div>
+                <h2 class="text-2xl font-semibold mb-6">File Logs</h2>
+                <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-700 text-xs uppercase text-gray-400">
+                            <tr>
+                                <th class="p-4">System</th><th class="p-4">File Name</th><th class="p-4">Type</th><th class="p-4">Size</th><th class="p-4">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboardTable" class="divide-y divide-gray-700"></tbody>
+                    </table>
+                </div>
             </div>
-            
-            <div id="monitor" class="page hidden"><div id="monitorGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div></div>
+
+            <div id="monitor" class="page hidden">
+                <h2 class="text-2xl font-semibold mb-6">System Health</h2>
+                <div id="monitorGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+            </div>
 
             <div id="registration" class="page hidden">
-                <div id="registrationTable"></div>
+                <h2 class="text-2xl font-semibold mb-6">PC Approvals</h2>
+                <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-700 text-xs uppercase text-gray-400">
+                            <tr><th class="p-4">System Name</th><th class="p-4">Code</th><th class="p-4">Status</th><th class="p-4 text-right">Action</th></tr>
+                        </thead>
+                        <tbody id="registrationTable" class="divide-y divide-gray-700"></tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
@@ -50,7 +70,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAVuK7rOFkfNvfBCovdgW-ahK5euGLVC34",
@@ -64,17 +84,15 @@
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // --- AUTH LOGIC ---
+        // LOGIN HANDLERS
         window.handleLogin = () => {
             const email = document.getElementById('loginEmail').value;
             const pass = document.getElementById('loginPass').value;
-            const errDiv = document.getElementById('loginError');
-
-            signInWithEmailAndPassword(auth, email, pass)
-                .catch(error => {
-                    errDiv.innerText = "Login Failed: " + error.message;
-                    errDiv.classList.remove('hidden');
-                });
+            signInWithEmailAndPassword(auth, email, pass).catch(err => {
+                const errDiv = document.getElementById('loginError');
+                errDiv.innerText = err.message;
+                errDiv.classList.remove('hidden');
+            });
         };
 
         window.handleLogout = () => signOut(auth);
@@ -83,24 +101,66 @@
             if (user) {
                 document.getElementById('loginPage').classList.add('hidden');
                 document.getElementById('mainContent').classList.remove('hidden');
-                loadData(); // Start listening to DB only after login
+                startListeners();
             } else {
                 document.getElementById('loginPage').classList.remove('hidden');
                 document.getElementById('mainContent').classList.add('hidden');
             }
         });
 
-        // --- PAGE NAV ---
         window.showPage = (id) => {
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         };
 
-        // --- DATA LOADERS (Wrap your existing onValue listeners in this function) ---
-        function loadData() {
-            onValue(ref(db, 'logs'), (snap) => { /* update dashboardTable */ });
-            onValue(ref(db, 'systems'), (snap) => { /* update monitorGrid */ });
-            onValue(ref(db, 'registrations'), (snap) => { /* update registrationTable */ });
+        window.approveSystem = (name) => update(ref(db, `registrations/${name}`), { status: 'Approved' });
+
+        // --- THE DATA LISTENERS ---
+        function startListeners() {
+            // Logs
+            onValue(ref(db, 'logs'), (snap) => {
+                const tbody = document.getElementById('dashboardTable');
+                tbody.innerHTML = '';
+                snap.forEach(c => {
+                    const v = c.val();
+                    tbody.innerHTML += `<tr><td class="p-4 font-bold text-blue-300">${v.system_name}</td><td class="p-4">${v.file_name}</td><td class="p-4">${v.file_type}</td><td class="p-4">${v.file_size}</td><td class="p-4 text-gray-400 text-xs">${v.created_time}</td></tr>`;
+                });
+            });
+
+            // Status
+            onValue(ref(db, 'systems'), (snap) => {
+                const grid = document.getElementById('monitorGrid');
+                grid.innerHTML = '';
+                snap.forEach(c => {
+                    const v = c.val();
+                    const isOnline = (Date.now() / 1000) - v.last_seen < 60;
+                    grid.innerHTML += `
+                        <div class="bg-gray-800 p-4 rounded-lg border-t-2 ${isOnline ? 'border-green-500' : 'border-red-500'}">
+                            <h3 class="font-bold text-lg">${c.key}</h3>
+                            <p class="text-sm text-gray-400">BIOS: ${v.bios_time}</p>
+                            <p class="text-xs ${isOnline ? 'text-green-400' : 'text-red-400'} font-bold mt-2">${isOnline ? 'ONLINE' : 'OFFLINE'}</p>
+                        </div>`;
+                });
+            });
+
+            // Registrations
+            onValue(ref(db, 'registrations'), (snap) => {
+                const tbody = document.getElementById('registrationTable');
+                tbody.innerHTML = '';
+                snap.forEach(c => {
+                    const v = c.val();
+                    const isApproved = v.status === 'Approved';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="p-4">${c.key}</td>
+                            <td class="p-4 font-mono text-yellow-400">${v.code}</td>
+                            <td class="p-4 text-sm ${isApproved ? 'text-green-400' : 'text-orange-400'}">${v.status}</td>
+                            <td class="p-4 text-right">
+                                ${!isApproved ? `<button onclick="approveSystem('${c.key}')" class="bg-green-600 px-3 py-1 rounded text-xs font-bold">Approve</button>` : '—'}
+                            </td>
+                        </tr>`;
+                });
+            });
         }
     </script>
 </body>
