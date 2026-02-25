@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SystemWatcher // Secure Control</title>
+    <title>SystemWatcher // Secure Slate</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap');
@@ -95,7 +95,7 @@
 </head>
 <body class="min-h-screen">
 
-    <!-- Confirmation Modal -->
+    <!-- Confirmation Overlay -->
     <div id="confirmModal">
         <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 max-w-sm w-full mx-4 shadow-2xl">
             <h3 class="text-white font-semibold text-lg mb-2">Confirm Action</h3>
@@ -107,7 +107,7 @@
         </div>
     </div>
 
-    <!-- Message Modal -->
+    <!-- Notification Overlay -->
     <div id="msgModal">
         <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 max-w-sm w-full mx-4 shadow-2xl text-center">
             <div id="msgIcon" class="mb-4"></div>
@@ -142,7 +142,7 @@
         </div>
     </div>
 
-    <!-- Main Content App -->
+    <!-- Main Content -->
     <div id="mainContent" class="hidden">
         <nav class="border-b border-slate-900 px-8 py-6 sticky top-0 bg-slate-950/80 backdrop-blur-xl z-50">
             <div class="max-w-6xl mx-auto flex justify-between items-center">
@@ -167,12 +167,12 @@
         </nav>
 
         <main class="max-w-6xl mx-auto p-8 lg:p-12">
-            <!-- Data Feed (Logs) -->
+            <!-- Section: Activity Logs (Filtered: MP4) -->
             <div id="dashboard" class="page">
                 <div class="flex justify-between items-end mb-12">
                     <div>
                         <h2 class="text-white text-3xl font-semibold tracking-tight">Activity Logs</h2>
-                        <p class="text-xs text-slate-500 mt-1">Live encrypted stream // <span class="text-indigo-400 font-medium">MP4 ONLY</span></p>
+                        <p class="text-xs text-slate-500 mt-1">Live stream // <span class="text-indigo-400 font-medium">MP4 DETECTED</span></p>
                     </div>
                     <p class="text-[10px] mono text-slate-600 uppercase tracking-widest bg-slate-900 px-3 py-1 rounded-full" id="sessionTimer">00:00:00</p>
                 </div>
@@ -180,9 +180,9 @@
                     <table class="w-full text-left">
                         <thead>
                             <tr>
-                                <th class="pb-5">Source Node</th>
-                                <th class="pb-5">Artifact</th>
-                                <th class="pb-5">Type</th>
+                                <th class="pb-5">Workstation</th>
+                                <th class="pb-5">Artifact Name</th>
+                                <th class="pb-5">Extension</th>
                                 <th class="pb-5">Sync Time</th>
                                 <th class="pb-5 text-right">Integrity</th>
                             </tr>
@@ -192,12 +192,12 @@
                 </div>
             </div>
 
-            <!-- System Status (Workstations) -->
+            <!-- Section: Workstation Mesh -->
             <div id="monitor" class="page hidden">
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-12">
                     <div class="lg:col-span-1">
                         <h2 class="text-white text-3xl font-semibold tracking-tight mb-4">Validation</h2>
-                        <p class="text-sm text-slate-500 mb-8 leading-relaxed">Input a security key generated in Master Control to authorize a local workstation.</p>
+                        <p class="text-sm text-slate-500 mb-8 leading-relaxed">Enter a master key to authorize a local node.</p>
                         <div class="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
                             <div>
                                 <label class="text-[10px] uppercase font-bold tracking-widest text-slate-500 block mb-2">Node ID</label>
@@ -211,29 +211,29 @@
                         </div>
                     </div>
                     <div class="lg:col-span-3">
-                        <h2 class="text-white text-3xl font-semibold tracking-tight mb-12">System Status</h2>
+                        <h2 class="text-white text-3xl font-semibold tracking-tight mb-12">Active Mesh</h2>
                         <div id="monitorGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Master Control (Keys) -->
+            <!-- Section: Master Control Forge -->
             <div id="registration" class="page hidden">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
                     <div>
                         <h3 class="text-white font-semibold text-lg mb-2">Master Control</h3>
-                        <p class="text-sm text-slate-500 mb-8 leading-relaxed">Authorized keys allow remote nodes to connect to the central monitor via encrypted uplink.</p>
+                        <p class="text-sm text-slate-500 mb-8 leading-relaxed">Generate unique tokens for secure uplink.</p>
                         <div class="space-y-4">
-                            <input id="pcNameInput" type="text" placeholder="Target identifier" class="w-full input-minimal p-4 rounded-2xl text-sm">
-                            <button id="genKeyBtn" onclick="generateKey()" class="w-full btn-minimal py-4 rounded-2xl text-sm shadow-indigo-500/20">Generate Key</button>
+                            <input id="pcNameInput" type="text" placeholder="Host identifier" class="w-full input-minimal p-4 rounded-2xl text-sm">
+                            <button id="genKeyBtn" onclick="generateKey()" class="w-full btn-minimal py-4 rounded-2xl text-sm shadow-indigo-500/20">Forge Key</button>
                         </div>
                     </div>
                     <div class="lg:col-span-2">
                         <table class="w-full text-left">
                             <thead>
                                 <tr>
-                                    <th class="pb-5">Node Identity</th>
-                                    <th class="pb-5">Encryption Key</th>
+                                    <th class="pb-5">Host Identity</th>
+                                    <th class="pb-5">Token</th>
                                     <th class="pb-5">Clearance</th>
                                     <th class="pb-5 text-right">Ops</th>
                                 </tr>
@@ -251,25 +251,34 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Global environment provided config
-        const firebaseConfig = JSON.parse(__firebase_config);
+        // Your specific Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyB5L9Qx3X1rgPDeUWmMjY1eFhezZ5T6FkM",
+          authDomain: "system-watcher-d275c.firebaseapp.com",
+          projectId: "system-watcher-d275c",
+          storageBucket: "system-watcher-d275c.firebasestorage.app",
+          messagingSenderId: "801984839924",
+          appId: "1:801984839924:web:1b20d20bba2d684d071ea1",
+          measurementId: "G-B6N8VZ6NBN"
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const appId = "system-watcher-d275c";
 
         let currentUser = null;
         let listenersActive = false;
 
         // AUTH HANDLERS
         window.handleLogin = async () => {
-            const email = document.getElementById('loginEmail').value;
-            const pass = document.getElementById('loginPass').value;
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
             const btn = document.getElementById('loginBtn');
             const errorEl = document.getElementById('loginError');
 
             if (!email || !pass) {
-                showError("Credentials Required");
+                showError("Credentials required");
                 return;
             }
 
@@ -296,7 +305,7 @@
                 document.getElementById('userDisplay').innerText = user.email;
                 if (!listenersActive) {
                     listenersActive = true;
-                    setupRealtimeData();
+                    setupSync();
                 }
             } else {
                 document.getElementById('loginPage').classList.remove('hidden');
@@ -304,35 +313,31 @@
             }
         });
 
-        // REAL-TIME FIRESTORE DATA
-        function setupRealtimeData() {
+        // REAL-TIME SYNC
+        function setupSync() {
             if (!currentUser) return;
 
-            // 1. Logs Collection Listener
-            const logsRef = collection(db, 'artifacts', appId, 'public', 'data', 'logs');
-            onSnapshot(logsRef, (snapshot) => {
+            // Logs (Filtered locally for MP4)
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'logs'), (snapshot) => {
                 const tbody = document.getElementById('dashboardTable');
                 tbody.innerHTML = '';
-                
-                const allLogs = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                // Filter to only show MP4 files and sort by timestamp
-                allLogs.filter(l => l.file_type === 'MP4')
-                       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-                       .forEach(log => {
-                           tbody.innerHTML += `
-                               <tr>
-                                   <td class="py-5 mono text-indigo-400 font-bold text-xs">${log.system_id || 'NODE-ERR'}</td>
-                                   <td class="py-5 text-slate-100 font-medium">${log.file_name}</td>
-                                   <td class="py-5 text-slate-500 text-xs font-semibold">${log.file_type}</td>
-                                   <td class="py-5 text-slate-500 text-xs">${log.timestamp?.split(' ')[1] || '--:--'}</td>
-                                   <td class="py-5 text-right"><span class="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">VERIFIED</span></td>
-                               </tr>`;
-                       });
+                const logs = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                logs.filter(l => l.file_type === 'MP4')
+                    .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))
+                    .forEach(log => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="py-5 mono text-indigo-400 font-bold text-xs">${log.system_id || 'NODE-00'}</td>
+                                <td class="py-5 text-slate-100 font-medium">${log.file_name}</td>
+                                <td class="py-5 text-slate-500 text-xs font-semibold">${log.file_type}</td>
+                                <td class="py-5 text-slate-500 text-xs">${log.timestamp?.split(' ')[1] || '--:--'}</td>
+                                <td class="py-5 text-right"><span class="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">VERIFIED</span></td>
+                            </tr>`;
+                    });
             });
 
-            // 2. Master Keys Listener
-            const keysRef = collection(db, 'artifacts', appId, 'public', 'data', 'keys');
-            onSnapshot(keysRef, (snapshot) => {
+            // Master Keys
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'keys'), (snapshot) => {
                 const tbody = document.getElementById('registrationTable');
                 tbody.innerHTML = '';
                 snapshot.forEach(d => {
@@ -343,15 +348,14 @@
                             <td class="py-5 mono text-indigo-400 text-xs font-bold">${k.code}</td>
                             <td class="py-5 text-slate-500 text-[10px] uppercase font-bold tracking-wider">ROOT_CLEARANCE</td>
                             <td class="py-5 text-right">
-                                <button onclick="revokeKey('${d.id}', '${k.name}')" class="text-slate-500 hover:text-rose-400 text-xs font-medium transition-colors">Revoke</button>
+                                <button onclick="revokeKey('${d.id}', '${k.name}')" class="text-slate-500 hover:text-rose-400 text-xs font-medium transition">Revoke</button>
                             </td>
                         </tr>`;
                 });
             });
 
-            // 3. Workstations (Mesh) Listener
-            const nodesRef = collection(db, 'artifacts', appId, 'public', 'data', 'workstations');
-            onSnapshot(nodesRef, (snapshot) => {
+            // Workstations
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'workstations'), (snapshot) => {
                 const grid = document.getElementById('monitorGrid');
                 grid.innerHTML = '';
                 snapshot.forEach(d => {
@@ -368,16 +372,15 @@
             });
         }
 
-        // FUNCTIONAL ACTIONS
+        // ACTIONS
         window.generateKey = async () => {
             const nameInput = document.getElementById('pcNameInput');
             const name = nameInput.value.trim().toUpperCase();
-            if (!name) return showMsg('Validation Error', 'Enter a node identifier.', 'error');
-
+            if (!name) return showMsg('Error', 'ID required', 'error');
             const code = `SW-${Math.floor(1000 + Math.random() * 9000)}`;
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'keys', crypto.randomUUID()), { name, code, created: Date.now() });
-                showMsg('Success', `Security Key for ${name}: ${code}`);
+                showMsg('Token Forged', `Security Key for ${name}: ${code}`);
                 nameInput.value = '';
             } catch (e) { showMsg('Operation Failed', 'Check Firestore rules.', 'error'); }
         };
@@ -385,15 +388,14 @@
         window.validateWorkstation = async () => {
             const name = document.getElementById('validateName').value.trim().toUpperCase();
             const key = document.getElementById('validateKey').value.trim();
-            if (!name || !key) return showMsg('Validation Error', 'Input Node ID and Master Key', 'error');
+            if (!name || !key) return showMsg('Error', 'Input ID and Key', 'error');
 
             const keysRef = collection(db, 'artifacts', appId, 'public', 'data', 'keys');
-            // One-time fetch to validate against the existing keys
             onSnapshot(keysRef, async (snap) => {
                 const match = snap.docs.find(d => d.data().code === key);
                 if (match) {
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'workstations', name), { name, authorizedAt: Date.now() });
-                    showMsg('Success', `Node ${name} authorized and live.`);
+                    showMsg('Authorized', `Workstation ${name} is live.`);
                     document.getElementById('validateName').value = '';
                     document.getElementById('validateKey').value = '';
                 } else {
@@ -403,7 +405,7 @@
         };
 
         window.revokeKey = (id, name) => {
-            document.getElementById('confirmMessage').innerText = `Revoke access for "${name}"? Sync will terminate immediately.`;
+            document.getElementById('confirmMessage').innerText = `Permanently revoke Master Control access for "${name}"?`;
             document.getElementById('confirmModal').style.display = 'flex';
             document.getElementById('confirmBtn').onclick = async () => {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'keys', id));
@@ -418,32 +420,15 @@
         };
         window.closeMsg = () => document.getElementById('msgModal').style.display = 'none';
         window.closeConfirm = () => document.getElementById('confirmModal').style.display = 'none';
-
-        function showError(text) {
-            const el = document.getElementById('loginError');
-            el.innerText = text; el.classList.remove('hidden');
-        }
-
+        function showError(text) { const el = document.getElementById('loginError'); el.innerText = text; el.classList.remove('hidden'); }
         function showMsg(title, text, type = 'success') {
             document.getElementById('msgTitle').innerText = title;
             document.getElementById('msgText').innerText = text;
-            const icon = document.getElementById('msgIcon');
-            icon.innerHTML = type === 'success' 
-                ? '<div class="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>'
-                : '<div class="w-12 h-12 bg-rose-500/10 text-rose-400 rounded-full flex items-center justify-center mx-auto mb-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></div>';
             document.getElementById('msgModal').style.display = 'flex';
         }
 
-        // Live Clock
-        let uptime = 0;
-        setInterval(() => {
-            uptime++;
-            const h = String(Math.floor(uptime/3600)).padStart(2,'0');
-            const m = String(Math.floor((uptime%3600)/60)).padStart(2,'0');
-            const s = String(uptime%60).padStart(2,'0');
-            const timer = document.getElementById('sessionTimer');
-            if (timer) timer.innerText = `${h}:${m}:${s}`;
-        }, 1000);
+        let s = 0; setInterval(() => { s++; const h = String(Math.floor(s/3600)).padStart(2,'0'), m = String(Math.floor((s%3600)/60)).padStart(2,'0'), sec = String(s%60).padStart(2,'0'); 
+        if(document.getElementById('sessionTimer')) document.getElementById('sessionTimer').innerText = `${h}:${m}:${sec}`; }, 1000);
     </script>
 </body>
 </html>
