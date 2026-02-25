@@ -163,7 +163,6 @@
                         <p class="text-xs text-slate-500 mt-1">Persistent historical log // <span class="text-indigo-400 font-medium">DATA PRESERVED</span></p>
                     </div>
                     <div class="flex items-center space-x-4">
-                        <button onclick="confirmClearLogs()" class="text-[10px] mono text-rose-500 border border-rose-500/30 px-3 py-1 rounded-full hover:bg-rose-500/10 transition">Wipe Record</button>
                         <p class="text-[10px] mono text-slate-600 uppercase tracking-widest bg-slate-900 px-3 py-1 rounded-full" id="sessionTimer">00:00:00</p>
                     </div>
                 </div>
@@ -330,17 +329,6 @@
                 });
             });
         }
-
-        window.confirmClearLogs = () => {
-            document.getElementById('confirmMessage').innerText = "Wipe all activity records from the database? This cannot be undone.";
-            document.getElementById('confirmModal').style.display = 'flex';
-            document.getElementById('confirmBtn').onclick = async () => {
-                const q = await getD(colRef(db, 'artifacts', appId, 'public', 'data', 'logs'));
-                q.forEach(async (d) => await delD(docRef(db, 'artifacts', appId, 'public', 'data', 'logs', d.id)));
-                closeConfirm();
-                showMsg('Record Wiped', 'All historical logs have been deleted.');
-            };
-        };
 
         window.generateKey = async () => {
             const name = document.getElementById('pcNameInput').value.trim().toUpperCase();
