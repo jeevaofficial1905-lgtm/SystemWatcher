@@ -82,6 +82,15 @@
             display: inline-block;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -172,9 +181,7 @@
                                 <th class="pb-5 text-right">Integrity</th>
                             </tr>
                         </thead>
-                        <tbody id="dashboardTable" class="text-sm">
-                            <!-- Rows injected here -->
-                        </tbody>
+                        <tbody id="dashboardTable" class="text-sm"></tbody>
                     </table>
                 </div>
             </div>
@@ -214,7 +221,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyB5L9Qx3X1rgPDeUWmMjY1eFhezZ5T6FkM",
@@ -232,6 +239,7 @@
 
         let currentLogs = [];
         let activeNodes = [];
+        let nodeDataCache = [];
 
         // --- AUTHENTICATION ---
         window.handleLogin = async () => {
@@ -266,20 +274,21 @@
 
         // --- DATA SYNC ---
         function setupListeners() {
-            // Listen for all logs
+            // Real-time Logs Listener
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'logs'), (snap) => {
                 currentLogs = snap.docs.map(d => d.data());
                 renderFilteredLogs();
             });
 
-            // Listen for all workstations
+            // Real-time Workstation Listener (System Mesh)
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'workstations'), (snap) => {
-                activeNodes = snap.docs.map(d => d.data().name);
+                nodeDataCache = snap.docs.map(d => d.data());
+                activeNodes = nodeDataCache.map(n => n.name);
                 updateWorkstationDropdown();
-                renderMonitorGrid(snap.docs.map(d => d.data()));
+                renderMonitorGrid();
             });
 
-            // Listen for master keys
+            // Real-time Master Key Listener
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'keys'), (snap) => {
                 const tbody = document.getElementById('registrationTable');
                 tbody.innerHTML = '';
@@ -333,13 +342,25 @@
         }
 
         // --- MONITOR & KEYS ---
-        function renderMonitorGrid(nodes) {
+        function renderMonitorGrid() {
             const grid = document.getElementById('monitorGrid');
+            const now = Date.now();
             grid.innerHTML = '';
-            nodes.forEach(n => {
-                grid.innerHTML += `<div class="bg-slate-900 p-6 rounded-xl border border-slate-800 flex justify-between items-center">
+            
+            nodeDataCache.forEach(n => {
+                // Heartbeat check: If last heartbeat was < 30 seconds ago, show as ONLINE
+                // Note: Requires the agent to update 'lastSeen' field periodically
+                const isOnline = n.lastSeen ? (now - n.lastSeen < 35000) : true; 
+                const statusColor = isOnline ? 'text-emerald-400' : 'text-slate-600';
+                const dotColor = isOnline ? 'bg-emerald-500 pulse-dot' : 'bg-slate-700';
+                const statusText = isOnline ? 'ONLINE' : 'OFFLINE';
+
+                grid.innerHTML += `<div class="bg-slate-900 p-6 rounded-xl border border-slate-800 flex justify-between items-center transition-all duration-500">
                     <span class="text-white font-semibold">${n.name}</span>
-                    <div class="flex items-center space-x-2"><span class="text-[10px] text-emerald-400 font-bold">LIVE</span><div class="w-2 h-2 bg-emerald-500 rounded-full"></div></div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] ${statusColor} font-black tracking-widest">${statusText}</span>
+                        <div class="w-2.5 h-2.5 ${dotColor} rounded-full"></div>
+                    </div>
                 </div>`;
             });
         }
@@ -369,8 +390,21 @@
             document.getElementById('msgModal').style.display = 'flex';
         }
 
-        let s = 0; setInterval(() => { s++; const h=String(Math.floor(s/3600)).padStart(2,'0'), m=String(Math.floor((s%3600)/60)).padStart(2,'0'), sec=String(s%60).padStart(2,'0'); 
-        document.getElementById('sessionTimer').innerText = `${h}:${m}:${sec}`; }, 1000);
+        // Global interval for updating session timer and refreshing grid status
+        setInterval(() => {
+            // Update session timer
+            s++; 
+            const h=String(Math.floor(s/3600)).padStart(2,'0');
+            const m=String(Math.floor((s%3600)/60)).padStart(2,'0');
+            const sec=String(s%60).padStart(2,'0'); 
+            const timerEl = document.getElementById('sessionTimer');
+            if (timerEl) timerEl.innerText = `${h}:${m}:${sec}`;
+
+            // Refresh grid to update ONLINE/OFFLINE labels based on current time
+            renderMonitorGrid();
+        }, 1000);
+
+        let s = 0;
     </script>
 </body>
 </html>
