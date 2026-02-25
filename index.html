@@ -1,185 +1,436 @@
-import os
-import time
-import sys
-import json
-import requests
-import argparse
-import hashlib
-import base64
-from datetime import datetime
-
-# --- CONFIGURATION ---
-VERSION = "4.8.0-Z"
-SYNC_INTERVAL = 5  
-DEFAULT_MONITOR_PATH = r"D:\VMS"
-CONFIG_FILE = "config.json"
-OFFLINE_CACHE_FILE = "pending_logs.json"
-HISTORY_FILE = "synced_history.json"  # Prevents duplication across restarts
-
-# FIREBASE PROJECT SETTINGS
-FIREBASE_PROJECT_ID = "system-watcher-d275c"
-APP_ID = "system-watcher-d275c" 
-
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-def print_header():
-    print(f"\033[94m")
-    print(r"""
-    ███████╗██╗   ██╗███████╗██╗    ██╗ █████╗ ████████╗ ██████╗██╗  ██╗███████╗██████╗ 
-    ██╔════╝╚██╗ ██╔╝██╔════╝██║    ██║██╔══██╗╚══██╔══╝██╔════╝██║  ██║██╔════╝██╔══██╗
-    ███████╗ ╚████╔╝ ███████╗██║ █╗ ██║███████║   ██║   ██║     ███████║█████╗  ██████╔╝
-    ╚════██║  ╚██╔╝  ╚════██║██║███╗██║██╔══██║   ██║   ██║     ██╔══██║██╔══╝  ██╔══██╗
-    ███████║   ██║   ███████║╚███╔███╔╝██║  ██║   ██║   ╚██████╗██║  ██║███████╗██║  ██║
-    ╚══════╝   ╚═╝   ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-    """)
-    print(f"    SYSTEMWATCHER CLOUD AGENT // VERSION {VERSION}")
-    print(f"    -----------------------------------------------------------")
-    print(f"\033[0m")
-
-def generate_doc_id(ws_id, file_name):
-    """Generates a unique, deterministic ID to prevent duplicates in Firestore."""
-    seed = f"{ws_id}_{file_name}"
-    return hashlib.md5(seed.encode()).hexdigest()
-
-def transmit_log(ws_id, file_name, timestamp=None):
-    """Uses PATCH to upsert data, preventing duplicates by using a unique doc ID."""
-    doc_id = generate_doc_id(ws_id, file_name)
-    url = f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/databases/(default)/documents/artifacts/{APP_ID}/public/data/logs/{doc_id}"
-    
-    if not timestamp:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    ext = file_name.split('.')[-1].upper() if '.' in file_name else "DATA"
-    
-    payload = {
-        "fields": {
-            "system_id": {"stringValue": ws_id},
-            "file_name": {"stringValue": file_name},
-            "file_type": {"stringValue": ext},
-            "timestamp": {"stringValue": timestamp},
-            "integrity": {"stringValue": "VERIFIED"}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SystemWatcher // Secure Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        :root {
+            --accent: #6366f1;
+            --bg: #020617;
+            --surface: #0f172a;
+            --border: #1e293b;
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
         }
-    }
-    
-    try:
-        # Using PATCH for deterministic ID (upsert)
-        response = requests.patch(url, json=payload, timeout=8)
-        return response.status_code == 200
-    except:
-        return False
 
-def verify_clearance(ws_id, sec_key):
-    """Checks if the master key for this node still exists in the cloud."""
-    url = f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/databases/(default)/documents/artifacts/{APP_ID}/public/data/keys"
-    try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            documents = data.get('documents', [])
-            for doc in documents:
-                fields = doc.get('fields', {})
-                if fields.get('name', {}).get('stringValue') == ws_id and \
-                   fields.get('code', {}).get('stringValue') == sec_key:
-                    return True
-        return False
-    except:
-        # If network fails, assume authorized to prevent false disconnects
-        return True
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg);
+            color: var(--text-dim);
+            -webkit-font-smoothing: antialiased;
+        }
 
-def load_json(filepath):
-    if os.path.exists(filepath):
-        try:
-            with open(filepath, 'r') as f: return json.load(f)
-        except: return [] if "history" in filepath or "pending" in filepath else None
-    return [] if "history" in filepath or "pending" in filepath else None
+        code, .mono { font-family: 'JetBrains Mono', monospace; }
 
-def save_json(filepath, data):
-    with open(filepath, 'w') as f: json.dump(data, f, indent=4)
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
-def monitor_system(ws_id, watch_path, sec_key):
-    clear_screen()
-    print_header()
-    print(f"ACTIVE NODE: {ws_id}  |  STATUS: \033[92mONLINE\033[0m")
-    print(f"SCAN PATH: {watch_path}")
-    print("-" * 65)
-    
-    synced_history = set(load_json(HISTORY_FILE))
+        table { border-collapse: separate; border-spacing: 0; }
+        th { font-weight: 600; color: #475569; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.1em; }
+        td { border-bottom: 1px solid var(--border); transition: background 0.2s; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(30, 41, 59, 0.5); }
 
-    try:
-        while True:
-            # 1. Clearance Check (Fixes the "Ghost" online status)
-            if not verify_clearance(ws_id, sec_key):
-                print(f"\n\033[91m[!] CRITICAL: ACCESS REVOKED BY ADMINISTRATOR.\033[0m")
-                print(f"[*] Node {ws_id} is no longer authorized. Terminating session...")
-                time.sleep(3)
-                sys.exit()
+        .input-minimal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+        .input-minimal:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+            outline: none;
+        }
 
-            # 2. Sync offline cache
-            pending = load_json(OFFLINE_CACHE_FILE)
-            if pending:
-                print(f"[*] SYNCING {len(pending)} CACHED LOGS...")
-                still_pending = []
-                for item in pending:
-                    if transmit_log(ws_id, item['file_name'], item['timestamp']):
-                        synced_history.add(item['file_name'])
-                    else:
-                        still_pending.append(item)
-                save_json(OFFLINE_CACHE_FILE, still_pending)
-                save_json(HISTORY_FILE, list(synced_history))
+        .btn-minimal {
+            background: var(--accent);
+            color: #ffffff;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-minimal:hover:not(:disabled) {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
 
-            # 3. Scan for new files
-            if os.path.exists(watch_path):
-                for root, dirs, files in os.walk(watch_path):
-                    for file in files:
-                        if file not in synced_history:
-                            ts = datetime.now().strftime("%H:%M:%S")
-                            full_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            print(f"[{ts}] \033[94mDETECTED\033[0m -> {file}")
-                            
-                            if transmit_log(ws_id, file):
-                                print(f"[{ts}] \033[92mSYNCED\033[0m")
-                                synced_history.add(file)
-                                save_json(HISTORY_FILE, list(synced_history))
-                            else:
-                                print(f"[{ts}] \033[91mOFFLINE\033[0m -> CACHED")
-                                pending.append({"file_name": file, "timestamp": full_ts})
-                                save_json(OFFLINE_CACHE_FILE, pending)
-                                synced_history.add(file)
+        #msgModal, #confirmModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.9);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loader {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Notification Overlay -->
+    <div id="msgModal">
+        <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 max-w-sm w-full mx-4 shadow-2xl text-center">
+            <h3 id="msgTitle" class="text-white font-semibold text-lg mb-2">Notification</h3>
+            <p id="msgText" class="text-sm text-slate-400 mb-6 leading-relaxed"></p>
+            <button onclick="closeMsg()" class="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-500 transition">Dismiss</button>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal">
+        <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 max-w-sm w-full mx-4 shadow-2xl">
+            <h3 class="text-white font-semibold text-lg mb-2">Confirm Action</h3>
+            <p id="confirmMessage" class="text-sm text-slate-400 mb-8 leading-relaxed"></p>
+            <div class="flex space-x-3">
+                <button id="confirmBtn" class="flex-1 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-500 transition">Confirm</button>
+                <button onclick="closeConfirm()" class="flex-1 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-700 transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Portal -->
+    <div id="loginPage" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-6">
+        <div class="w-full max-w-xs">
+            <div class="mb-12 text-center">
+                <div class="w-12 h-12 bg-indigo-500 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-indigo-500/20 rotate-3">
+                    <div class="w-4 h-4 bg-white rounded-sm -rotate-3"></div>
+                </div>
+                <h2 class="text-white text-xl font-semibold tracking-tight">SystemWatcher</h2>
+                <p class="text-xs text-slate-500 mt-2">Secure Administrator Access</p>
+            </div>
+            <div class="space-y-4">
+                <input id="loginEmail" type="email" placeholder="Admin Email" class="w-full input-minimal p-3.5 rounded-xl text-sm">
+                <input id="loginPass" type="password" placeholder="Password" class="w-full input-minimal p-3.5 rounded-xl text-sm">
+                <button id="loginBtn" onclick="handleLogin()" class="w-full btn-minimal py-3.5 rounded-xl text-sm mt-4 shadow-lg shadow-indigo-500/10 flex items-center justify-center space-x-2">
+                    <span>Sign In</span>
+                </button>
+                <p id="loginError" class="text-rose-500 text-[10px] text-center hidden pt-4 font-semibold uppercase tracking-wider"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="mainContent" class="hidden">
+        <nav class="border-b border-slate-900 px-8 py-6 sticky top-0 bg-slate-950/80 backdrop-blur-xl z-50">
+            <div class="max-w-6xl mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-10">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-6 h-6 bg-indigo-500 rounded-lg flex items-center justify-center"><div class="w-2 h-2 bg-white rounded-full"></div></div>
+                        <span class="text-white font-semibold text-sm">SystemWatcher</span>
+                    </div>
+                    <div class="flex space-x-8">
+                        <button onclick="showPage('dashboard')" class="text-xs font-medium hover:text-indigo-400 transition">Logs</button>
+                        <button onclick="showPage('monitor')" class="text-xs font-medium hover:text-indigo-400 transition">System Mesh</button>
+                        <button onclick="showPage('registration')" class="text-xs font-medium hover:text-indigo-400 transition">Master Control</button>
+                    </div>
+                </div>
+                <button onclick="handleLogout()" class="text-xs text-slate-500 hover:text-rose-400 font-medium">Terminate Session</button>
+            </div>
+        </nav>
+
+        <main class="max-w-6xl mx-auto p-8">
+            <!-- Logs View with Search & Filter -->
+            <div id="dashboard" class="page">
+                <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+                    <div>
+                        <h2 class="text-white text-3xl font-semibold tracking-tight">Activity Record</h2>
+                        <p class="text-xs text-slate-500 mt-1">Live data feed // <span class="text-indigo-400 font-medium">SEARCH & FILTER</span></p>
+                    </div>
+                    
+                    <div class="flex flex-wrap items-center gap-3 bg-slate-900/40 p-2 rounded-xl border border-slate-800/50">
+                        <div class="relative">
+                            <input id="searchArtifact" type="text" placeholder="Search Artifact..." class="input-minimal text-xs py-2 px-3 pr-8 rounded-lg w-48" oninput="renderFilteredLogs()">
+                            <div class="absolute right-2.5 top-2.5 text-slate-600">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" stroke-linecap="round"/></svg>
+                            </div>
+                        </div>
+                        
+                        <select id="filterWorkstation" class="input-minimal text-xs py-2 px-3 rounded-lg bg-slate-900 border-slate-800" onchange="renderFilteredLogs()">
+                            <option value="all">All Workstations</option>
+                        </select>
+                        
+                        <div class="h-4 w-[1px] bg-slate-800 mx-1"></div>
+                        <p class="text-[10px] mono text-slate-500 px-2" id="sessionTimer">00:00:00</p>
+                    </div>
+                </div>
+
+                <div class="overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr>
+                                <th class="pb-5">Workstation ID</th>
+                                <th class="pb-5">Artifact Name</th>
+                                <th class="pb-5">Type</th>
+                                <th class="pb-5">Sync Time</th>
+                                <th class="pb-5 text-right">Integrity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboardTable" class="text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Monitor View -->
+            <div id="monitor" class="page hidden">
+                <div class="flex justify-between items-center mb-12">
+                    <h2 class="text-white text-3xl font-semibold tracking-tight">System Mesh</h2>
+                    <p class="text-xs text-slate-500">Real-time Node Status</p>
+                </div>
+                <div id="monitorGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+
+            <!-- Master Control -->
+            <div id="registration" class="page hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
+                    <div class="bg-slate-900/30 p-8 rounded-2xl border border-slate-800/50">
+                        <h3 class="text-white font-semibold text-lg mb-2">Master Control</h3>
+                        <p class="text-sm text-slate-500 mb-8">Forge security tokens for workstation authorization.</p>
+                        <input id="pcNameInput" type="text" placeholder="Node Name (e.g. WS-01)" class="w-full input-minimal p-4 rounded-xl text-sm mb-4">
+                        <button onclick="generateKey()" class="w-full btn-minimal py-4 rounded-xl text-sm">Forge Master Key</button>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr>
+                                    <th class="pb-5">Node Identity</th>
+                                    <th class="pb-5">Master Token</th>
+                                    <th class="pb-5 text-right">Ops</th>
+                                </tr>
+                            </thead>
+                            <tbody id="registrationTable" class="text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyB5L9Qx3X1rgPDeUWmMjY1eFhezZ5T6FkM",
+          authDomain: "system-watcher-d275c.firebaseapp.com",
+          projectId: "system-watcher-d275c",
+          storageBucket: "system-watcher-d275c.firebasestorage.app",
+          messagingSenderId: "801984839924",
+          appId: "1:801984839924:web:1b20d20bba2d684d071ea1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = "system-watcher-d275c";
+
+        let currentLogs = [];
+        let nodeDataCache = [];
+
+        // --- AUTHENTICATION ---
+        window.handleLogin = async () => {
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader"></span>';
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (e) {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Sign In</span>';
+                const err = document.getElementById('loginError');
+                err.innerText = e.code.replace('auth/', '').replace(/-/g, ' ').toUpperCase();
+                err.classList.remove('hidden');
+            }
+        };
+
+        window.handleLogout = () => signOut(auth);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                setupListeners();
+            } else {
+                document.getElementById('loginPage').classList.remove('hidden');
+                document.getElementById('mainContent').classList.add('hidden');
+            }
+        });
+
+        // --- DATA SYNC ---
+        function setupListeners() {
+            // Logs Listener
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'logs'), (snap) => {
+                currentLogs = snap.docs.map(d => d.data());
+                renderFilteredLogs();
+            });
+
+            // Workstation Mesh Listener
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'workstations'), (snap) => {
+                nodeDataCache = snap.docs.map(d => d.data());
+                updateWorkstationDropdown();
+                renderMonitorGrid();
+            });
+
+            // Master Key Control Listener
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'keys'), (snap) => {
+                const tbody = document.getElementById('registrationTable');
+                tbody.innerHTML = '';
+                snap.forEach(d => {
+                    const k = d.data();
+                    tbody.innerHTML += `<tr>
+                        <td class="py-5 text-slate-100 font-medium">${k.name}</td>
+                        <td class="py-5 mono text-indigo-400 font-bold">${k.code}</td>
+                        <td class="py-5 text-right">
+                            <button onclick="confirmRevoke('${d.id}', '${k.name}', '${k.code}')" class="text-xs text-rose-500 font-bold hover:underline">Revoke</button>
+                        </td>
+                    </tr>`;
+                });
+            });
+        }
+
+        // --- FILTERING LOGIC ---
+        window.renderFilteredLogs = () => {
+            const searchTerm = document.getElementById('searchArtifact').value.toLowerCase();
+            const selectedWS = document.getElementById('filterWorkstation').value;
+            const tbody = document.getElementById('dashboardTable');
             
-            # 4. Heartbeat
-            try:
-                hb_url = f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/databases/(default)/documents/artifacts/{APP_ID}/public/data/workstations/{ws_id}?updateMask.fieldPaths=lastSeen"
-                requests.patch(hb_url, json={"fields": {"lastSeen": {"integerValue": int(time.time() * 1000)}}}, timeout=5)
-            except: pass
+            tbody.innerHTML = '';
 
-            time.sleep(SYNC_INTERVAL)
-    except KeyboardInterrupt:
-        print("\n\033[93m[*] SESSION TERMINATED.\033[0m")
+            const filtered = currentLogs.filter(log => {
+                const matchesName = log.file_name.toLowerCase().includes(searchTerm);
+                const matchesWS = selectedWS === 'all' || log.system_id === selectedWS;
+                return matchesName && matchesWS;
+            });
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--path", help="Monitor path", type=str)
-    args = parser.parse_args()
+            filtered.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(log => {
+                tbody.innerHTML += `<tr>
+                    <td class="py-5 mono text-indigo-400 font-bold text-xs">${log.system_id}</td>
+                    <td class="py-5 text-slate-100 font-medium">${log.file_name}</td>
+                    <td class="py-5 text-slate-500 text-xs font-semibold">${log.file_type}</td>
+                    <td class="py-5 text-slate-500 text-xs">${log.timestamp?.split(' ')[1] || '--:--'}</td>
+                    <td class="py-5 text-right"><span class="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">VERIFIED</span></td>
+                </tr>`;
+            });
+        };
 
-    try: import requests
-    except ImportError: sys.exit("[!] pip install requests required")
+        function updateWorkstationDropdown() {
+            const select = document.getElementById('filterWorkstation');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="all">All Workstations</option>';
+            nodeDataCache.forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n.name;
+                opt.textContent = n.name;
+                select.appendChild(opt);
+            });
+            select.value = currentVal;
+        }
 
-    config = load_json(CONFIG_FILE) or {}
-    ws_id = config.get("workstation_id")
-    sec_key = config.get("master_key")
-    saved_path = config.get("watch_path", DEFAULT_MONITOR_PATH)
+        // --- MONITOR GRID ---
+        function renderMonitorGrid() {
+            const grid = document.getElementById('monitorGrid');
+            const now = Date.now();
+            grid.innerHTML = '';
+            
+            nodeDataCache.forEach(n => {
+                // Heartbeat check: Agent updates lastSeen every cycle (5s). 
+                const isOnline = n.lastSeen ? (now - n.lastSeen < 45000) : true; 
+                const statusColor = isOnline ? 'text-emerald-400' : 'text-slate-600';
+                const dotColor = isOnline ? 'bg-emerald-500 pulse-dot' : 'bg-slate-700';
+                const statusText = isOnline ? 'ONLINE' : 'OFFLINE';
 
-    if not ws_id:
-        clear_screen(); print_header()
-        ws_id = input("ENTER WORKSTATION ID: ").strip().upper()
-        sec_key = input("ENTER MASTER KEY: ").strip()
-        if not sec_key.startswith("SW-"): sys.exit("INVALID KEY")
-    
-    # Prompt for path
-    print(f"\033[94m\n[?] TARGET FOLDER\033[0m\n    Current: {saved_path}\n    [Enter] to keep, or type new:")
-    u_path = input("    >> ").strip()
-    final_path = u_path if u_path and os.path.isdir(u_path) else saved_path
-    
-    save_json(CONFIG_FILE, {"workstation_id": ws_id, "master_key": sec_key, "watch_path": final_path})
-    monitor_system(ws_id, final_path, sec_key)
+                grid.innerHTML += `<div class="bg-slate-900 p-6 rounded-xl border border-slate-800 flex justify-between items-center group transition-all duration-500">
+                    <span class="text-white font-semibold">${n.name}</span>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-[10px] ${statusColor} font-black tracking-widest">${statusText}</span>
+                            <div class="w-2.5 h-2.5 ${dotColor} rounded-full"></div>
+                        </div>
+                        <button onclick="removeGhostNode('${n.name}')" class="opacity-0 group-hover:opacity-100 transition text-slate-600 hover:text-rose-500" title="Manually remove node">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                    </div>
+                </div>`;
+            });
+        }
+
+        window.generateKey = async () => {
+            const name = document.getElementById('pcNameInput').value.trim().toUpperCase();
+            if (!name) return showMsg('Required', 'Enter a Node Name.');
+            const code = `SW-${Math.floor(1000 + Math.random() * 9000)}`;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'keys', crypto.randomUUID()), { name, code, created: Date.now() });
+            showMsg('Key Forged', `Security key for ${name}: ${code}`);
+            document.getElementById('pcNameInput').value = '';
+        };
+
+        window.confirmRevoke = (id, name, code) => {
+            const modal = document.getElementById('confirmModal');
+            const btn = document.getElementById('confirmBtn');
+            document.getElementById('confirmMessage').innerText = `Revoke access for "${name}"? This terminates active sessions and removes the authorization token ${code}.`;
+            modal.style.display = 'flex';
+            btn.onclick = async () => {
+                // Delete the Key
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'keys', id));
+                // Clean up the Workstation entry so it disappears from the Mesh immediately
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'workstations', name));
+                closeConfirm();
+                showMsg('Access Revoked', `Security clearance for ${name} removed.`);
+            };
+        };
+
+        window.removeGhostNode = async (name) => {
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'workstations', name));
+        };
+
+        // --- UI HELPERS ---
+        window.showPage = (id) => {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        };
+        window.closeMsg = () => document.getElementById('msgModal').style.display = 'none';
+        window.closeConfirm = () => document.getElementById('confirmModal').style.display = 'none';
+        function showMsg(title, text) {
+            document.getElementById('msgTitle').innerText = title;
+            document.getElementById('msgText').innerText = text;
+            document.getElementById('msgModal').style.display = 'flex';
+        }
+
+        let s = 0; setInterval(() => { s++; const h=String(Math.floor(s/3600)).padStart(2,'0'), m=String(Math.floor((s%3600)/60)).padStart(2,'0'), sec=String(s%60).padStart(2,'0'); 
+        if (document.getElementById('sessionTimer')) document.getElementById('sessionTimer').innerText = `${h}:${m}:${sec}`; renderMonitorGrid(); }, 1000);
+    </script>
+</body>
+</html>
