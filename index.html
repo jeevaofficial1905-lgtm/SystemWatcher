@@ -43,7 +43,7 @@
             transition: all 0.2s;
         }
         .input-minimal:focus {
-            border-color: --accent;
+            border-color: var(--accent);
             box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
             outline: none;
         }
@@ -238,7 +238,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore as getDB, doc as docRef, collection as colRef, setDoc as setD, deleteDoc as delD, onSnapshot as onS, getDocs as getD, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyB5L9Qx3X1rgPDeUWmMjY1eFhezZ5T6FkM",
@@ -252,7 +252,7 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        const db = getDB(app);
         const appId = "system-watcher-d275c";
 
         let currentUser = null;
@@ -293,7 +293,7 @@
 
         function setupSync() {
             // Log listener (Archive)
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'logs'), (snapshot) => {
+            onS(colRef(db, 'artifacts', appId, 'public', 'data', 'logs'), (snapshot) => {
                 const tbody = document.getElementById('dashboardTable');
                 tbody.innerHTML = '';
                 snapshot.docs.map(d => ({id: d.id, ...d.data()}))
@@ -305,17 +305,17 @@
             });
 
             // Master Key listener
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'keys'), (snapshot) => {
+            onS(colRef(db, 'artifacts', appId, 'public', 'data', 'keys'), (snapshot) => {
                 const tbody = document.getElementById('registrationTable');
                 tbody.innerHTML = '';
                 snapshot.forEach(d => {
                     const k = d.data();
-                    tbody.innerHTML += `<tr><td class="py-5 text-slate-100 font-medium">${k.name}</td><td class="py-5 mono text-indigo-400 text-xs font-bold">${k.code}</td><td class="py-5 text-slate-500 text-[10px] font-bold">ROOT</td><td class="py-5 text-right"><button onclick="revokeKey('${d.id}', '${k.name}')" class="text-slate-500 hover:text-rose-400 text-xs font-medium transition">Revoke</button></td></tr>`;
+                    tbody.innerHTML += `<tr><td class="py-5 text-slate-100 font-medium">${k.name}</td><td class="py-5 mono text-indigo-400 text-xs font-bold">${k.code}</td><td class="py-5 text-slate-500 text-[10px] font-bold">ROOT</td><td class="py-5 text-right"><button onclick="revokeKey('${d.id}', '${k.name}', '${k.code}')" class="text-slate-500 hover:text-rose-400 text-xs font-medium transition">Revoke</button></td></tr>`;
                 });
             });
 
             // Active Workstation listener
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'workstations'), (snapshot) => {
+            onS(colRef(db, 'artifacts', appId, 'public', 'data', 'workstations'), (snapshot) => {
                 const grid = document.getElementById('monitorGrid');
                 grid.innerHTML = '';
                 snapshot.forEach(d => {
@@ -335,8 +335,8 @@
             document.getElementById('confirmMessage').innerText = "Wipe all activity records from the database? This cannot be undone.";
             document.getElementById('confirmModal').style.display = 'flex';
             document.getElementById('confirmBtn').onclick = async () => {
-                const q = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'logs'));
-                q.forEach(async (d) => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'logs', d.id)));
+                const q = await getD(colRef(db, 'artifacts', appId, 'public', 'data', 'logs'));
+                q.forEach(async (d) => await delD(docRef(db, 'artifacts', appId, 'public', 'data', 'logs', d.id)));
                 closeConfirm();
                 showMsg('Record Wiped', 'All historical logs have been deleted.');
             };
@@ -346,7 +346,7 @@
             const name = document.getElementById('pcNameInput').value.trim().toUpperCase();
             if (!name) return showMsg('Error', 'ID required', 'error');
             const code = `SW-${Math.floor(1000 + Math.random() * 9000)}`;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'keys', crypto.randomUUID()), { name, code, created: Date.now() });
+            await setD(docRef(db, 'artifacts', appId, 'public', 'data', 'keys', crypto.randomUUID()), { name, code, created: Date.now() });
             showMsg('Token Forged', `Security Key for ${name}: ${code}`);
             document.getElementById('pcNameInput').value = '';
         };
@@ -354,26 +354,38 @@
         window.validateWorkstation = async () => {
             const name = document.getElementById('validateName').value.trim().toUpperCase();
             const key = document.getElementById('validateKey').value.trim();
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'keys'), async (snap) => {
-                if (snap.docs.find(d => d.data().code === key)) {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'workstations', name), { name, authorizedAt: Date.now() });
+            onS(colRef(db, 'artifacts', appId, 'public', 'data', 'keys'), async (snap) => {
+                const found = snap.docs.find(d => d.data().code === key);
+                if (found) {
+                    await setD(docRef(db, 'artifacts', appId, 'public', 'data', 'workstations', name), { name, authorizedAt: Date.now(), master_key: key });
                     showMsg('Authorized', `Node ${name} is live.`);
                 } else showMsg('Unauthorized', 'Invalid key.', 'error');
             }, { once: true });
         };
 
-        window.revokeKey = (id, name) => {
-            document.getElementById('confirmMessage').innerText = `Revoke access for "${name}"? The master key and active monitor session will be removed, but activity logs will remain.`;
+        window.revokeKey = (id, hostName, keyToken) => {
+            document.getElementById('confirmMessage').innerText = `Revoke access for "${hostName}"? This will terminate the active monitor session for any workstation using token ${keyToken}.`;
             document.getElementById('confirmModal').style.display = 'flex';
             document.getElementById('confirmBtn').onclick = async () => {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'keys', id));
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'workstations', name));
+                // Delete the Master Key
+                await delD(docRef(db, 'artifacts', appId, 'public', 'data', 'keys', id));
+                
+                // Robust Deletion: Remove any workstation that used this key OR matches the host name
+                const wsSnap = await getD(colRef(db, 'artifacts', appId, 'public', 'data', 'workstations'));
+                wsSnap.forEach(async (wsDoc) => {
+                    const data = wsDoc.data();
+                    if (data.master_key === keyToken || data.name === hostName) {
+                        await delD(docRef(db, 'artifacts', appId, 'public', 'data', 'workstations', wsDoc.id));
+                    }
+                });
+                
                 closeConfirm();
+                showMsg('Access Revoked', `Token ${keyToken} and associated nodes removed.`);
             };
         };
 
         window.removeWorkstation = async (name) => {
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'workstations', name));
+            await delD(docRef(db, 'artifacts', appId, 'public', 'data', 'workstations', name));
         };
 
         window.showPage = (id) => {
