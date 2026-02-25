@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SystemWatcher // Secure Slate</title>
+    <title>SystemWatcher // Secure Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap');
@@ -54,12 +54,8 @@
             font-weight: 600;
             transition: all 0.2s;
         }
-        .btn-minimal:hover:not(:disabled) {
-            filter: brightness(1.1);
-            transform: translateY(-1px);
-        }
 
-        #confirmModal, #msgModal {
+        #msgModal, #confirmModal {
             display: none;
             position: fixed;
             inset: 0;
@@ -90,26 +86,16 @@
 </head>
 <body class="min-h-screen">
 
-    <div id="confirmModal">
-        <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 max-w-sm w-full mx-4 shadow-2xl">
-            <h3 class="text-white font-semibold text-lg mb-2">Confirm Action</h3>
-            <p id="confirmMessage" class="text-sm text-slate-400 mb-8 leading-relaxed"></p>
-            <div class="flex space-x-3">
-                <button id="confirmBtn" class="flex-1 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-semibold hover:bg-rose-500 transition">Confirm</button>
-                <button onclick="closeConfirm()" class="flex-1 py-2.5 bg-slate-800 text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-700 transition">Cancel</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- Notification Overlay -->
     <div id="msgModal">
         <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 max-w-sm w-full mx-4 shadow-2xl text-center">
-            <div id="msgIcon" class="mb-4"></div>
             <h3 id="msgTitle" class="text-white font-semibold text-lg mb-2">Notification</h3>
             <p id="msgText" class="text-sm text-slate-400 mb-6 leading-relaxed"></p>
             <button onclick="closeMsg()" class="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-500 transition">Dismiss</button>
         </div>
     </div>
 
+    <!-- Login Portal -->
     <div id="loginPage" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-6">
         <div class="w-full max-w-xs">
             <div class="mb-12 text-center">
@@ -120,11 +106,9 @@
                 <p class="text-xs text-slate-500 mt-2">Secure Administrator Access</p>
             </div>
             <div class="space-y-4">
-                <div class="space-y-3">
-                    <input id="loginEmail" type="email" placeholder="Admin Email" class="w-full input-minimal p-3.5 rounded-xl text-sm">
-                    <input id="loginPass" type="password" placeholder="Password" class="w-full input-minimal p-3.5 rounded-xl text-sm">
-                </div>
-                <button id="loginBtn" onclick="handleLogin()" class="w-full btn-minimal py-3.5 rounded-xl text-sm mt-4 shadow-lg shadow-indigo-500/10 transition-all flex items-center justify-center space-x-2">
+                <input id="loginEmail" type="email" placeholder="Admin Email" class="w-full input-minimal p-3.5 rounded-xl text-sm">
+                <input id="loginPass" type="password" placeholder="Password" class="w-full input-minimal p-3.5 rounded-xl text-sm">
+                <button id="loginBtn" onclick="handleLogin()" class="w-full btn-minimal py-3.5 rounded-xl text-sm mt-4 shadow-lg shadow-indigo-500/10 flex items-center justify-center space-x-2">
                     <span>Sign In</span>
                 </button>
                 <p id="loginError" class="text-rose-500 text-[10px] text-center hidden pt-4 font-semibold uppercase tracking-wider"></p>
@@ -132,97 +116,90 @@
         </div>
     </div>
 
+    <!-- Main Dashboard -->
     <div id="mainContent" class="hidden">
         <nav class="border-b border-slate-900 px-8 py-6 sticky top-0 bg-slate-950/80 backdrop-blur-xl z-50">
             <div class="max-w-6xl mx-auto flex justify-between items-center">
                 <div class="flex items-center space-x-10">
                     <div class="flex items-center space-x-3">
-                        <div class="w-6 h-6 bg-indigo-500 rounded-lg flex items-center justify-center">
-                            <div class="w-2 h-2 bg-white rounded-full"></div>
-                        </div>
-                        <span class="text-white font-semibold text-sm tracking-tight">SystemWatcher</span>
+                        <div class="w-6 h-6 bg-indigo-500 rounded-lg flex items-center justify-center"><div class="w-2 h-2 bg-white rounded-full"></div></div>
+                        <span class="text-white font-semibold text-sm">SystemWatcher</span>
                     </div>
                     <div class="flex space-x-8">
-                        <button onclick="showPage('dashboard')" class="text-xs font-medium hover:text-indigo-400 transition">Logs</button>
-                        <button onclick="showPage('monitor')" class="text-xs font-medium hover:text-indigo-400 transition">Workstation</button>
-                        <button onclick="showPage('registration')" class="text-xs font-medium hover:text-indigo-400 transition">Master Control</button>
+                        <button onclick="showPage('dashboard')" class="text-xs font-medium hover:text-indigo-400">Logs</button>
+                        <button onclick="showPage('monitor')" class="text-xs font-medium hover:text-indigo-400">Workstation</button>
+                        <button onclick="showPage('registration')" class="text-xs font-medium hover:text-indigo-400">Master Control</button>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <span id="userDisplay" class="text-[9px] mono text-slate-500 hidden md:block border border-slate-800 px-2 py-1 rounded"></span>
-                    <button onclick="handleLogout()" class="text-xs text-slate-500 hover:text-rose-400 transition font-medium">Terminate Session</button>
-                </div>
+                <button onclick="handleLogout()" class="text-xs text-slate-500 hover:text-rose-400 font-medium">Terminate</button>
             </div>
         </nav>
 
-        <main class="max-w-6xl mx-auto p-8 lg:p-12">
+        <main class="max-w-6xl mx-auto p-8">
+            <!-- Logs View with Search & Filter -->
             <div id="dashboard" class="page">
-                <div class="flex justify-between items-end mb-12">
+                <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
                     <div>
                         <h2 class="text-white text-3xl font-semibold tracking-tight">Activity Record</h2>
-                        <p class="text-xs text-slate-500 mt-1">Persistent historical log // <span class="text-indigo-400 font-medium">DATA PRESERVED</span></p>
+                        <p class="text-xs text-slate-500 mt-1">Live data feed // <span class="text-indigo-400 font-medium">REAL-TIME SEARCH</span></p>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <p class="text-[10px] mono text-slate-600 uppercase tracking-widest bg-slate-900 px-3 py-1 rounded-full" id="sessionTimer">00:00:00</p>
+                    
+                    <div class="flex flex-wrap items-center gap-3 bg-slate-900/40 p-2 rounded-xl border border-slate-800/50">
+                        <div class="relative">
+                            <input id="searchArtifact" type="text" placeholder="Search Artifact..." class="input-minimal text-xs py-2 px-3 pr-8 rounded-lg w-48" oninput="renderFilteredLogs()">
+                            <div class="absolute right-2.5 top-2.5 text-slate-600">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" stroke-linecap="round"/></svg>
+                            </div>
+                        </div>
+                        
+                        <select id="filterWorkstation" class="input-minimal text-xs py-2 px-3 rounded-lg bg-slate-900" onchange="renderFilteredLogs()">
+                            <option value="all">All Workstations</option>
+                        </select>
+                        
+                        <div class="h-4 w-[1px] bg-slate-800 mx-1"></div>
+                        <p class="text-[10px] mono text-slate-500 px-2" id="sessionTimer">00:00:00</p>
                     </div>
                 </div>
+
                 <div class="overflow-hidden">
                     <table class="w-full text-left">
                         <thead>
                             <tr>
-                                <th class="pb-5">Source Workstation</th>
+                                <th class="pb-5">Workstation ID</th>
                                 <th class="pb-5">Artifact Name</th>
-                                <th class="pb-5">Extension</th>
+                                <th class="pb-5">Type</th>
                                 <th class="pb-5">Sync Time</th>
                                 <th class="pb-5 text-right">Integrity</th>
                             </tr>
                         </thead>
-                        <tbody id="dashboardTable" class="text-sm"></tbody>
+                        <tbody id="dashboardTable" class="text-sm">
+                            <!-- Rows injected here -->
+                        </tbody>
                     </table>
                 </div>
             </div>
 
+            <!-- Monitor View -->
             <div id="monitor" class="page hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-4 gap-12">
-                    <div class="lg:col-span-1">
-                        <h2 class="text-white text-3xl font-semibold tracking-tight mb-4">Validation</h2>
-                        <p class="text-sm text-slate-500 mb-8 leading-relaxed">Authorize a local node to join the active mesh.</p>
-                        <div class="space-y-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-                            <div>
-                                <label class="text-[10px] uppercase font-bold tracking-widest text-slate-500 block mb-2">Node ID</label>
-                                <input id="validateName" type="text" placeholder="e.g. WS-01" class="w-full input-minimal p-3.5 rounded-xl text-sm">
-                            </div>
-                            <div>
-                                <label class="text-[10px] uppercase font-bold tracking-widest text-slate-500 block mb-2">Master Key</label>
-                                <input id="validateKey" type="text" placeholder="SW-XXXX" class="w-full input-minimal p-3.5 rounded-xl text-sm mono">
-                            </div>
-                            <button onclick="validateWorkstation()" class="w-full btn-minimal py-3.5 rounded-xl text-sm shadow-indigo-500/20">Authorize</button>
-                        </div>
-                    </div>
-                    <div class="lg:col-span-3">
-                        <h2 class="text-white text-3xl font-semibold tracking-tight mb-12">Active Mesh</h2>
-                        <div id="monitorGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-                    </div>
-                </div>
+                <h2 class="text-white text-3xl font-semibold tracking-tight mb-12">System Mesh</h2>
+                <div id="monitorGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
 
+            <!-- Master Control -->
             <div id="registration" class="page hidden">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
-                    <div>
+                    <div class="bg-slate-900/30 p-8 rounded-2xl border border-slate-800/50">
                         <h3 class="text-white font-semibold text-lg mb-2">Master Control</h3>
-                        <p class="text-sm text-slate-500 mb-8 leading-relaxed">Forge security tokens for workstation handshakes.</p>
-                        <div class="space-y-4">
-                            <input id="pcNameInput" type="text" placeholder="Host identifier" class="w-full input-minimal p-4 rounded-2xl text-sm">
-                            <button onclick="generateKey()" class="w-full btn-minimal py-4 rounded-2xl text-sm shadow-indigo-500/20">Forge Key</button>
-                        </div>
+                        <p class="text-sm text-slate-500 mb-8">Forge security tokens for new workstation nodes.</p>
+                        <input id="pcNameInput" type="text" placeholder="Node Name (e.g. WS-01)" class="w-full input-minimal p-4 rounded-xl text-sm mb-4">
+                        <button onclick="generateKey()" class="w-full btn-minimal py-4 rounded-xl text-sm">Forge Master Key</button>
                     </div>
                     <div class="lg:col-span-2">
                         <table class="w-full text-left">
                             <thead>
                                 <tr>
-                                    <th class="pb-5">Host Identity</th>
-                                    <th class="pb-5">Token</th>
-                                    <th class="pb-5">Clearance</th>
+                                    <th class="pb-5">Node Identity</th>
+                                    <th class="pb-5">Master Token</th>
                                     <th class="pb-5 text-right">Ops</th>
                                 </tr>
                             </thead>
@@ -237,7 +214,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore as getDB, doc as docRef, collection as colRef, setDoc as setD, deleteDoc as delD, onSnapshot as onS, getDocs as getD, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyB5L9Qx3X1rgPDeUWmMjY1eFhezZ5T6FkM",
@@ -245,151 +222,155 @@
           projectId: "system-watcher-d275c",
           storageBucket: "system-watcher-d275c.firebasestorage.app",
           messagingSenderId: "801984839924",
-          appId: "1:801984839924:web:1b20d20bba2d684d071ea1",
-          measurementId: "G-B6N8VZ6NBN"
+          appId: "1:801984839924:web:1b20d20bba2d684d071ea1"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getDB(app);
+        const db = getFirestore(app);
         const appId = "system-watcher-d275c";
 
-        let currentUser = null;
-        let listenersActive = false;
+        let currentLogs = [];
+        let activeNodes = [];
 
+        // --- AUTHENTICATION ---
         window.handleLogin = async () => {
-            const email = document.getElementById('loginEmail').value.trim();
-            const pass = document.getElementById('loginPass').value.trim();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPass').value;
             const btn = document.getElementById('loginBtn');
-            const errorEl = document.getElementById('loginError');
-
             btn.disabled = true;
-            btn.innerHTML = '<span class="loader"></span> <span>Verifying...</span>';
+            btn.innerHTML = '<span class="loader"></span>';
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
-            } catch (error) {
+            } catch (e) {
                 btn.disabled = false;
                 btn.innerHTML = '<span>Sign In</span>';
-                errorEl.innerText = error.code.toUpperCase();
-                errorEl.classList.remove('hidden');
+                const err = document.getElementById('loginError');
+                err.innerText = e.code.replace('auth/', '').replace(/-/g, ' ').toUpperCase();
+                err.classList.remove('hidden');
             }
         };
 
         window.handleLogout = () => signOut(auth);
 
         onAuthStateChanged(auth, (user) => {
-            currentUser = user;
             if (user) {
                 document.getElementById('loginPage').classList.add('hidden');
                 document.getElementById('mainContent').classList.remove('hidden');
-                document.getElementById('userDisplay').innerText = user.email;
-                if (!listenersActive) { listenersActive = true; setupSync(); }
+                setupListeners();
             } else {
                 document.getElementById('loginPage').classList.remove('hidden');
                 document.getElementById('mainContent').classList.add('hidden');
             }
         });
 
-        function setupSync() {
-            // Log listener (Archive)
-            onS(colRef(db, 'artifacts', appId, 'public', 'data', 'logs'), (snapshot) => {
-                const tbody = document.getElementById('dashboardTable');
-                tbody.innerHTML = '';
-                snapshot.docs.map(d => ({id: d.id, ...d.data()}))
-                    .filter(l => l.file_type === 'MP4')
-                    .sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))
-                    .forEach(log => {
-                        tbody.innerHTML += `<tr><td class="py-5 mono text-indigo-400 font-bold text-xs">${log.system_id || 'UNKNOWN'}</td><td class="py-5 text-slate-100 font-medium">${log.file_name}</td><td class="py-5 text-slate-500 text-xs font-semibold">MP4</td><td class="py-5 text-slate-500 text-xs">${log.timestamp?.split(' ')[1] || '--'}</td><td class="py-5 text-right"><span class="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">VERIFIED</span></td></tr>`;
-                    });
+        // --- DATA SYNC ---
+        function setupListeners() {
+            // Listen for all logs
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'logs'), (snap) => {
+                currentLogs = snap.docs.map(d => d.data());
+                renderFilteredLogs();
             });
 
-            // Master Key listener
-            onS(colRef(db, 'artifacts', appId, 'public', 'data', 'keys'), (snapshot) => {
+            // Listen for all workstations
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'workstations'), (snap) => {
+                activeNodes = snap.docs.map(d => d.data().name);
+                updateWorkstationDropdown();
+                renderMonitorGrid(snap.docs.map(d => d.data()));
+            });
+
+            // Listen for master keys
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'keys'), (snap) => {
                 const tbody = document.getElementById('registrationTable');
                 tbody.innerHTML = '';
-                snapshot.forEach(d => {
+                snap.forEach(d => {
                     const k = d.data();
-                    tbody.innerHTML += `<tr><td class="py-5 text-slate-100 font-medium">${k.name}</td><td class="py-5 mono text-indigo-400 text-xs font-bold">${k.code}</td><td class="py-5 text-slate-500 text-[10px] font-bold">ROOT</td><td class="py-5 text-right"><button onclick="revokeKey('${d.id}', '${k.name}', '${k.code}')" class="text-slate-500 hover:text-rose-400 text-xs font-medium transition">Revoke</button></td></tr>`;
+                    tbody.innerHTML += `<tr>
+                        <td class="py-5 text-slate-100 font-medium">${k.name}</td>
+                        <td class="py-5 mono text-indigo-400 font-bold">${k.code}</td>
+                        <td class="py-5 text-right"><button onclick="revokeKey('${d.id}')" class="text-xs text-rose-500 font-bold hover:underline">Revoke</button></td>
+                    </tr>`;
                 });
             });
+        }
 
-            // Active Workstation listener
-            onS(colRef(db, 'artifacts', appId, 'public', 'data', 'workstations'), (snapshot) => {
-                const grid = document.getElementById('monitorGrid');
-                grid.innerHTML = '';
-                snapshot.forEach(d => {
-                    const n = d.data();
-                    grid.innerHTML += `<div class="bg-slate-900 px-6 py-5 rounded-xl border border-slate-800 flex items-center justify-between group">
-                        <span class="text-white font-semibold text-sm">${n.name}</span>
-                        <div class="flex items-center space-x-4">
-                            <div class="flex items-center space-x-2"><span class="text-[10px] font-bold text-emerald-400">LIVE</span><div class="w-2 h-2 rounded-full bg-emerald-500"></div></div>
-                            <button onclick="removeWorkstation('${n.name}')" class="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-rose-500 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-                        </div>
-                    </div>`;
-                });
+        // --- FILTERING LOGIC ---
+        window.renderFilteredLogs = () => {
+            const searchTerm = document.getElementById('searchArtifact').value.toLowerCase();
+            const selectedWS = document.getElementById('filterWorkstation').value;
+            const tbody = document.getElementById('dashboardTable');
+            
+            tbody.innerHTML = '';
+
+            const filtered = currentLogs.filter(log => {
+                const matchesName = log.file_name.toLowerCase().includes(searchTerm);
+                const matchesWS = selectedWS === 'all' || log.system_id === selectedWS;
+                return matchesName && matchesWS;
+            });
+
+            filtered.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(log => {
+                tbody.innerHTML += `<tr>
+                    <td class="py-5 mono text-indigo-400 font-bold text-xs">${log.system_id}</td>
+                    <td class="py-5 text-slate-100 font-medium">${log.file_name}</td>
+                    <td class="py-5 text-slate-500 text-xs font-semibold">${log.file_type}</td>
+                    <td class="py-5 text-slate-500 text-xs">${log.timestamp?.split(' ')[1] || '--:--'}</td>
+                    <td class="py-5 text-right"><span class="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">VERIFIED</span></td>
+                </tr>`;
+            });
+        };
+
+        function updateWorkstationDropdown() {
+            const select = document.getElementById('filterWorkstation');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="all">All Workstations</option>';
+            activeNodes.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                select.appendChild(opt);
+            });
+            select.value = currentVal;
+        }
+
+        // --- MONITOR & KEYS ---
+        function renderMonitorGrid(nodes) {
+            const grid = document.getElementById('monitorGrid');
+            grid.innerHTML = '';
+            nodes.forEach(n => {
+                grid.innerHTML += `<div class="bg-slate-900 p-6 rounded-xl border border-slate-800 flex justify-between items-center">
+                    <span class="text-white font-semibold">${n.name}</span>
+                    <div class="flex items-center space-x-2"><span class="text-[10px] text-emerald-400 font-bold">LIVE</span><div class="w-2 h-2 bg-emerald-500 rounded-full"></div></div>
+                </div>`;
             });
         }
 
         window.generateKey = async () => {
             const name = document.getElementById('pcNameInput').value.trim().toUpperCase();
-            if (!name) return showMsg('Error', 'ID required', 'error');
+            if (!name) return showMsg('Required', 'Enter a Node Name.');
             const code = `SW-${Math.floor(1000 + Math.random() * 9000)}`;
-            await setD(docRef(db, 'artifacts', appId, 'public', 'data', 'keys', crypto.randomUUID()), { name, code, created: Date.now() });
-            showMsg('Token Forged', `Security Key for ${name}: ${code}`);
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'keys', crypto.randomUUID()), { name, code, created: Date.now() });
+            showMsg('Key Forged', `Key for ${name}: ${code}`);
             document.getElementById('pcNameInput').value = '';
         };
 
-        window.validateWorkstation = async () => {
-            const name = document.getElementById('validateName').value.trim().toUpperCase();
-            const key = document.getElementById('validateKey').value.trim();
-            onS(colRef(db, 'artifacts', appId, 'public', 'data', 'keys'), async (snap) => {
-                const found = snap.docs.find(d => d.data().code === key);
-                if (found) {
-                    await setD(docRef(db, 'artifacts', appId, 'public', 'data', 'workstations', name), { name, authorizedAt: Date.now(), master_key: key });
-                    showMsg('Authorized', `Node ${name} is live.`);
-                } else showMsg('Unauthorized', 'Invalid key.', 'error');
-            }, { once: true });
+        window.revokeKey = async (id) => {
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'keys', id));
         };
 
-        window.revokeKey = (id, hostName, keyToken) => {
-            document.getElementById('confirmMessage').innerText = `Revoke access for "${hostName}"? This will terminate the active monitor session for any workstation using token ${keyToken}.`;
-            document.getElementById('confirmModal').style.display = 'flex';
-            document.getElementById('confirmBtn').onclick = async () => {
-                // Delete the Master Key
-                await delD(docRef(db, 'artifacts', appId, 'public', 'data', 'keys', id));
-                
-                // Robust Deletion: Remove any workstation that used this key OR matches the host name
-                const wsSnap = await getD(colRef(db, 'artifacts', appId, 'public', 'data', 'workstations'));
-                wsSnap.forEach(async (wsDoc) => {
-                    const data = wsDoc.data();
-                    if (data.master_key === keyToken || data.name === hostName) {
-                        await delD(docRef(db, 'artifacts', appId, 'public', 'data', 'workstations', wsDoc.id));
-                    }
-                });
-                
-                closeConfirm();
-                showMsg('Access Revoked', `Token ${keyToken} and associated nodes removed.`);
-            };
-        };
-
-        window.removeWorkstation = async (name) => {
-            await delD(docRef(db, 'artifacts', appId, 'public', 'data', 'workstations', name));
-        };
-
+        // --- UI HELPERS ---
         window.showPage = (id) => {
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
         };
         window.closeMsg = () => document.getElementById('msgModal').style.display = 'none';
-        window.closeConfirm = () => document.getElementById('confirmModal').style.display = 'none';
-        function showMsg(title, text, type = 'success') {
+        function showMsg(title, text) {
             document.getElementById('msgTitle').innerText = title;
             document.getElementById('msgText').innerText = text;
             document.getElementById('msgModal').style.display = 'flex';
         }
 
-        let s = 0; setInterval(() => { s++; const h = String(Math.floor(s/3600)).padStart(2,'0'), m = String(Math.floor((s%3600)/60)).padStart(2,'0'), sec = String(s%60).padStart(2,'0'); 
-        if(document.getElementById('sessionTimer')) document.getElementById('sessionTimer').innerText = `${h}:${m}:${sec}`; }, 1000);
+        let s = 0; setInterval(() => { s++; const h=String(Math.floor(s/3600)).padStart(2,'0'), m=String(Math.floor((s%3600)/60)).padStart(2,'0'), sec=String(s%60).padStart(2,'0'); 
+        document.getElementById('sessionTimer').innerText = `${h}:${m}:${sec}`; }, 1000);
     </script>
 </body>
 </html>
